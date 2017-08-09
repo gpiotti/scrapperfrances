@@ -107,12 +107,16 @@ def getData():
             cotizaciones[4] = str(
                 float(replace(row.findNext('td').findNext('td').findNext('td').text, ',', '.')) / 1000)
 
-    print(cotizaciones)
+    #print(cotizaciones)
     driver.close()
 
     main(cotizaciones)
 
 
 if __name__ == '__main__':
+    while (time.strftime("%H") < "10") :
+        #print ("zzzz...")
+        time.sleep(54000)
+        
     getData()
 
