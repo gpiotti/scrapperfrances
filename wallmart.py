@@ -167,16 +167,8 @@ def getData():
             for j in range(1,5):
                 
                 try:
-                    driver.set_window_size(1024, 768)
-                    driver.set_page_load_timeout(20)
-                    while finished == 0:
-                        try:
-                            driver.get(categoria)
-                            finished = 1
-                        except:
-                            time.sleep(5)
-                       
- 
+                 
+                    driver.get(categoria)
                     #time.sleep(delay)
                     driver.execute_script ("window.document.body.scrollTop = document.body.scrollHeight")
                     #time.sleep(delay*2)
