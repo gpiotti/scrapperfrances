@@ -2,6 +2,7 @@ from __future__ import print_function
 import httplib2
 import os
 import time
+import csv
 
 from selenium import webdriver
 from bs4 import BeautifulSoup
@@ -11,6 +12,12 @@ from apiclient import discovery
 from oauth2client import client
 from oauth2client import tools
 from oauth2client.file import Storage
+
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.action_chains import ActionChains
 
 try:
     import argparse
@@ -83,74 +90,190 @@ def main(values):
 
 
 def getData():
+    delay = 10
 
-    driver = webdriver.PhantomJS(executable_path=r'E:\PhantomJs\bin\phantomjs.exe')
-    driver.get("http://www.walmart.com.ar/")
-    # time.sleep(3)
-    soup = BeautifulSoup(driver.page_source, 'html.parser')
-    #rows = soup.find_all('td')
-    date = time.strftime("%d/%m/%Y")
-    categoriasSoup = soup.find_all('li', 'departamento-nome')
-    categorias = []
-    print ("Fetching categories...")
-    for link in categoriasSoup:
-        categorias.append("http://www.walmart.com.ar" + link.find('a')['href'])
-    print("done. %s categories fetched" % len(categorias))    
-    #driver.get("http://www.walmart.com.ar/aceites-y-aderezos")
-    
-    
-
-
-    #link item soup.find("a" , "prateleira__flags")["href"]
-    #descuento soup.find("span" ,"prateleira__discount")
-    #precio comun -> soup.find("span" ,"prateleira__list-price--val")
-    #precio promo -> soup.find("span", "prateleira__best-price")
-
-    #descuento int(soup.find("span" ,"prateleira__discount").string[0:-1])
-    ofertas = []
-    print("Fetching pages...")
-    for categoria in categorias:
-        print("Categoria %s" % categoria )
+    try:
+        driver = webdriver.PhantomJS(executable_path=r'E:\PhantomJs\bin\phantomjs.exe')
+        wait = WebDriverWait(driver, delay)
         driver.set_window_size(1024, 768)
-        driver.get(categoria)
-        print(categoria)
-        soup = BeautifulSoup(driver.page_source, 'html.parser')
-        #time.sleep(10)
-
-        cantPaginas = soup.find('ul', 'pages').find_all('li')[-2].text
-        for i in range(1,int(cantPaginas)):
-            print ("Fetching page %s of %s for %s" % (i,int(cantPaginas), categoria))
-            driver.execute_script ("window.document.body.scrollTop = document.body.scrollHeight")
-            time.sleep(20)
-            soup = BeautifulSoup(driver.page_source, 'html.parser')
-            all_items = soup.find("div", "prateleira prat-qtd n12colunas").find_all("ul")
-            
-            for item in all_items:
-                if item.find("span" ,"prateleira__discount") != None:
-                    discount = int(item.find("span" ,"prateleira__discount").string[0:-1])
-                    if discount * -1 > 30:
-                        ofertas.append([
-                        item.find("a" , "prateleira__flags")["href"], 
-                        item.find("span" ,"prateleira__list-price--val"),
-                        item.find("span", "prateleira__best-price"),
-                        discount
-                        ])
-            if i < int(cantPaginas):
-                driver.execute_script ("window.document.body.scrollTop = document.body.scrollHeight")
-                time.sleep(20)
-                print ("Clicking page %s..." % str(i+1)  )
-                driver.save_screenshot('out.png');
-                driver.find_element_by_xpath("//li[.='%s']" % str(i+1)).click()
+        print("Getting homepage...")
+        driver.set_page_load_timeout(20)
+        finished = 0
+        while finished == 0:
+            try:
+                driver.get("http://www.walmart.com.ar/")
+                finished = 1
+            except:
                 time.sleep(5)
-                
-                
-                
+        
+        #time.sleep(delay)
+        print("Clicking select store...")
+        selectStore =  driver.find_element_by_xpath('/html/body/div[3]/div/header/div/nav/div/div[1]/ul/li[4]/span[1]')
+        wait.until(EC.visibility_of(selectStore))
+        selectStore.click()
+        print("Clicking inputbox..")
+        storeInputBox =  driver.find_element_by_xpath('//*[@id="select-store-container"]/section/section[2]/div[1]/div[2]/form[1]/input')
+        wait.until(EC.visibility_of(storeInputBox))
+        storeInputBox.click()
+        print("Sending keys...")
+        storeInputBox.send_keys("1611")
+        storeInputBox.send_keys(Keys.RETURN)
+        
+        print("Clicking store name...")
+        sucursal =  driver.find_element_by_xpath('//*[@id="select-store-container"]/section/section[2]/div[3]/div[2]/div')
+        wait.until(EC.visibility_of(sucursal))
+        sucursal.click()
 
 
-        #print("Ofertas encontradas...")
-        for oferta in ofertas:
-            print(oferta[0])  
-        time.sleep(5)
+        soup = BeautifulSoup(driver.page_source, 'html.parser')
+        
+        #rows = soup.find_all('td')
+        date = time.strftime("%d/%m/%Y")
+        categoriasSoup = soup.find_all('li', 'departamento-nome')
+        categorias = []
+        print ("Fetching categories...")
+        for link in categoriasSoup:
+            if "http://www.walmart.com.ar" + link.find('a')['href'] not in categorias:
+                categorias.append("http://www.walmart.com.ar" + link.find('a')['href'])
+        print("done. %s categories fetched" % len(categorias))    
+        #driver.get("http://www.walmart.com.ar/aceites-y-aderezos")
+        
+        #categorias = categorias[:1]
+        # allowed = [
+        # u'http://www.walmart.com.ar/marroquineria',
+        # u'http://www.walmart.com.ar/marroquineria',
+        # ]
+ 
+        # for  h  in range(1,10):
+        #     for index, categoria in enumerate(categorias):
+        #         if categoria not in allowed:
+        #                 categorias.remove(categorias[index])
+        #                 print ("removed %s" % categoria)
+        
+        # print(categorias)
+
+
+        #link item soup.find("a" , "prateleira__flags")["href"]
+        #descuento soup.find("span" ,"prateleira__discount")
+        #precio comun -> soup.find("span" ,"prateleira__list-price--val")
+        #precio promo -> soup.find("span", "prateleira__best-price")
+
+        #descuento int(soup.find("span" ,"prateleira__discount").string[0:-1])
+        
+        print("Fetching pages...")
+        for  categoria in categorias:
+            q_ofertas = 0
+            print("Categoria %s" % categoria )
+            for j in range(1,5):
+                
+                try:
+                    driver.set_window_size(1024, 768)
+                    driver.set_page_load_timeout(20)
+                    while finished == 0:
+                        try:
+                            driver.get(categoria)
+                            finished = 1
+                        except:
+                            time.sleep(5)
+                       
+ 
+                    #time.sleep(delay)
+                    driver.execute_script ("window.document.body.scrollTop = document.body.scrollHeight")
+                    #time.sleep(delay*2)
+                    soup = BeautifulSoup(driver.page_source, 'html.parser')
+                    cantPaginas = soup.find('ul', 'pages').find_all('li')[-2].text
+                except Exception as e:
+                    if e.message == "list index out of range":
+                        cantPaginas = 1
+                        break
+                    #print (e)
+                    continue
+                break
+            try:
+                int(cantPaginas)
+            except Exception as e:
+                cantPaginas = 1
+            ofertas = []
+            for i in range(1,int(cantPaginas)+1):
+                print ("Buscando en pagina %s" % i)
+                q_ofertas_pagina = 0
+                retry = 0
+                for j in range(1,5):
+                    try:
+                        print ("Fetching page %s of %s for %s" % (i,int(cantPaginas), categoria))
+                        driver.execute_script ("window.document.body.scrollTop = document.body.scrollHeight")
+                        #time.sleep(delay*2)
+                        soup = BeautifulSoup(driver.page_source, 'html.parser')
+                        all_items = soup.find("div", "prateleira prat-qtd n12colunas").find_all("li")
+                    except Exception as e:
+                        retry += 1
+                        print ("Retrying %s times..." % str(retry))
+                        #print (e)
+                        #print (str(e.__class__.__name__))
+                        #driver.save_screenshot('error.png');
+                        continue
+                    break
+                    
+                for item in all_items:
+                    if item.find("span" ,"prateleira__discount") != None:
+                        discount = int(item.find("span" ,"prateleira__discount").string[0:-1])
+                        flag1 = item.find("div" , "prateleira__flags--discount-hightlight").text
+                        flag2 = item.find("div" , "prateleira__flags--discount-hightlight").text
+                        has_flag = flag1 + flag2
+                        if len(has_flag) > 1: 
+                            print("tiene flag")
+                        if discount * -1 > 30 or len(has_flag) > 1:
+                            ofertas.append([
+                            str(item.find("a" , "prateleira__flags")["href"]), 
+                            str(item.find("span" ,"prateleira__list-price--val").text),
+                            str(item.find("span", "prateleira__best-price").text),
+                            str(discount),
+                            "pagina %s" % i
+                            ])
+                            q_ofertas_pagina += 1
+                print ("Se econtraron %s ofertas nuevas" % str(q_ofertas_pagina))
+                q_ofertas += q_ofertas_pagina
+
+                if i < int(cantPaginas):
+                    for j in range(1,5):
+                        try:
+                            print ("Trying to click page %s..." % str(i+1)  )
+                            driver.execute_script ("window.document.body.scrollTop = document.body.scrollHeight")
+                            time.sleep(1)
+                            driver.execute_script ("window.document.body.scrollTop = -document.body.scrollHeight")
+                            time.sleep(1)
+                            driver.execute_script ("window.document.body.scrollTop = document.body.scrollHeight")
+                            time.sleep(1)
+
+                            nextPage = driver.find_element_by_xpath("//li[.='%s']" % str(i+1))
+                            actions = ActionChains(driver)
+                            actions.move_to_element(nextPage).perform()
+                            
+                            wait.until(EC.visibility_of(nextPage))
+                            print ("Clicking page %s..." % str(i+1)  )
+                            nextPage.click()
+                            
+                        except Exception as e:
+                                print("Retrying %s times" % j)
+                                #print (e.message)
+                                #print (str(e.__class__.__name__))
+                                #driver.save_screenshot('error.png');
+
+                                continue
+                        break          
+            if q_ofertas > 0:
+                print("Writting %s.csv..." % categoria.rsplit('/', 1)[-1])
+                with open("%s.csv" % categoria.rsplit('/', 1)[-1] , "wb") as f:
+                    writer = csv.writer(f, delimiter =';')
+                    writer.writerows(ofertas)
+           
+
+    except Exception as e:
+        print(e.message)
+        print (str(e.__class__.__name__))
+        driver.save_screenshot('out.png');
+
+
 
                       
     # cotizaciones = [0] * 5
